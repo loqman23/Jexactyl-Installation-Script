@@ -119,18 +119,18 @@ os_check(){
     fi
     
     if [ "$lsb_dist" =  "ubuntu" ]; then
-        if  [ "$dist_version" != "20.04" ]; then
-            output "Unsupported Ubuntu version. Only Ubuntu 20.04 is supported."
+        if  [ "$dist_version" != "20.04" ] && [ "$dist_version" != "22.04" ]; then
+            output "Unsupported Ubuntu version. Only Ubuntu 20.04 and 22.04 are supported."
             exit 2
         fi
     elif [ "$lsb_dist" = "debian" ]; then
         if [ "$dist_version" != "11" ]; then
-            output "Unsupported Debian version. Only Debian 10 is supported."
+            output "Unsupported Debian version. Only Debian 11 is supported."
             exit 2
         fi
     elif [ "$lsb_dist" = "fedora" ]; then
         if [ "$dist_version" != "35" ]; then
-            output "Unsupported Fedora version. Only Fedora 34 is supported."
+            output "Unsupported Fedora version. Only Fedora 35 is supported."
             exit 2
         fi
     elif [ "$lsb_dist" = "centos" ]; then
@@ -157,84 +157,14 @@ os_check(){
         output "Unsupported operating system."
         output ""
         output "Supported OS:"
-        output "Ubuntu: 20.04"
+        output "Ubuntu: 20.04, 22.04"
         output "Debian: 11"
         output "Fedora: 35"
         output "CentOS Stream: 8"
         output "Rocky Linux: 8"
-	output "AlmaLinux: 8"
+        output "AlmaLinux: 8"
         output "RHEL: 8"
         exit 2
-    fi
-}
-
-install_options(){
-    output "Please select your installation option:"
-    output "[1] Install the panel ${PANEL}."
-    output "[2] Install the wings ${WINGS}."
-    output "[3] Install the panel ${PANEL} and wings ${WINGS}."
-    output "[4] Upgrade panel to ${PANEL}."
-    output "[5] Upgrade wings to ${WINGS}."
-    output "[6] Upgrade panel to ${PANEL} and daemon to ${WINGS}."
-    output "[7] Install phpMyAdmin (only use this after you have installed the panel)."
-    output "[8] Emergency MariaDB root password reset."
-    output "[9] Emergency database host information reset."
-    read -r choice
-    case $choice in
-        1 ) installoption=1
-            output "You have selected ${PANEL} panel installation only."
-            ;;
-        2 ) installoption=2
-            output "You have selected wings ${WINGS} installation only."
-            ;;
-        3 ) installoption=3
-            output "You have selected ${PANEL} panel and wings ${WINGS} installation."
-            ;;
-        4 ) installoption=4
-            output "You have selected to upgrade the panel to ${PANEL}."
-            ;;
-	5 ) installoption=5
-            output "You have selected to upgrade the daemon to ${DAEMON}."
-            ;;
-        6 ) installoption=6
-            output "You have selected to upgrade panel to ${PANEL} and daemon to ${DAEMON}."
-            ;;
-        7 ) installoption=7
-            output "You have selected to install phpMyAdmin."
-            ;;
-        8 ) installoption=8
-            output "You have selected MariaDB root password reset."
-            ;;
-        9 ) installoption=9
-            output "You have selected Database Host information reset."
-            ;;
-        * ) output "You did not enter a valid selection."
-            install_options
-    esac
-}
-
-required_infos() {
-    output "Please enter the desired user email address:"
-    read -r email
-    dns_check
-}
-
-dns_check(){
-    output "Please enter your FQDN (panel.domain.tld):"
-    read -r FQDN
-
-    output "Resolving DNS..."
-    SERVER_IP=$(dig +short myip.opendns.com @resolver1.opendns.com -4)
-    DOMAIN_RECORD=$(dig +short ${FQDN})
-    if [ "${SERVER_IP}" != "${DOMAIN_RECORD}" ]; then
-        output ""
-        output "The entered domain does not resolve to the primary public IP of this server."
-        output "Please make an A record pointing to your server's IP. For example, if you make an A record called 'panel' pointing to your server's IP, your FQDN is panel.domain.tld"
-        output "If you are using Cloudflare, please disable the orange cloud."
-        output "If you do not have a domain, you can get a free one at https://freenom.com"
-        dns_check
-    else
-        output "Domain resolved correctly. Good to go..."
     fi
 }
 
@@ -247,10 +177,10 @@ repositories_setup(){
         LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
         add-apt-repository ppa:redislabs/redis -y
         apt -y update
-	    curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | sudo bash
+        curl -sS https://downloads.mariadb.com/MariaDB/mariadb_repo_setup | sudo bash
         if [ "$lsb_dist" =  "ubuntu" ]; then
             LC_ALL=C.UTF-8 add-apt-repository -y ppa:ondrej/php
-	    apt -y install tuned dnsutils
+            apt -y install tuned dnsutils
             tuned-adm profile latency-performance
         elif [ "$lsb_dist" =  "debian" ]; then
             apt-get -y install ca-certificates apt-transport-https
@@ -267,25 +197,14 @@ repositories_setup(){
             apt-get -y install curl
         fi
     elif  [ "$lsb_dist" =  "fedora" ] || [ "$lsb_dist" =  "centos" ] || [ "$lsb_dist" =  "rhel" ] || [ "$lsb_dist" = "rocky" ] || [ "$lsb_dist" = "almalinux" ]; then
-    	dnf -y install dnf-utils
+        dnf -y install dnf-utils
         if  [ "$lsb_dist" =  "fedora" ] ; then
             dnf -y install http://rpms.remirepo.net/fedora/remi-release-35.rpm
-	else	
-	    dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
-	    dnf -y install http://rpms.remirepo.net/enterprise/remi-release-8.rpm
-	fi
-#	dnf config-manager --set-enabled remi
-#        dnf -y install tuned dnf-automatic
-#        tuned-adm profile latency-performance
-#	systemctl enable --now irqbalance
-#	sed -i 's/apply_updates = no/apply_updates = yes/g' /etc/dnf/automatic.conf
-#	systemctl enable --now dnf-automatic.timer
-#        dnf -y upgrade
-#        dnf -y autoremove
-#        dnf -y clean packages
-#        dnf -y install curl bind-utils cronie
+        else    
+            dnf -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+            dnf -y install http://rpms.remirepo.net/enterprise/remi-release-8.rpm
+        fi
     fi
-#    systemctl enable --now fstrim.timer
 }
 
 install_dependencies(){
@@ -294,25 +213,12 @@ install_dependencies(){
         apt -y install php8.1 php8.1-{cli,gd,mysql,pdo,mbstring,tokenizer,bcmath,xml,fpm,curl,zip} mariadb-server nginx tar unzip git redis-server
         curl -sS https://getcomposer.org/installer | sudo php -- --install-dir=/usr/local/bin --filename=composer
     else
-    	dnf -y module install nginx:mainline/common
-	dnf -y module install php:remi-8.1/common
-	dnf -y module install redis:remi-6.2/common
-	dnf -y module install mariadb:10.5/server
+        dnf -y module install nginx:mainline/common
+        dnf -y module install php:remi-8.1/common
+        dnf -y module install redis:remi-6.2/common
+        dnf -y module install mariadb:10.5/server
         dnf -y install git policycoreutils-python-utils unzip wget expect jq php-mysql php-zip php-bcmath tar composer
     fi
-
-#    output "Enabling Services..."
-#    if [ "$lsb_dist" =  "ubuntu" ] || [ "$lsb_dist" =  "debian" ]; then
-#        systemctl enable --now redis-server
-#        systemctl enable --now php8.1-fpm
-#    elif [ "$lsb_dist" =  "fedora" ] || [ "$lsb_dist" =  "centos" ] || [ "$lsb_dist" =  "rhel" ] || [ "$lsb_dist" = "rocky" ] || [ "$lsb_dist" = "almalinux" ]; then
-#        systemctl enable --now redis
-#        systemctl enable --now php-fpm
-#    fi
-#
-#    systemctl enable --now cron
-#    systemctl enable --now mariadb
-#    systemctl enable --now nginx
 }
 
 install_jexactyl() {
@@ -330,9 +236,9 @@ install_jexactyl() {
     mkdir -p /var/www/jexactyl
     cd /var/www/jexactyl || exit
     if [ ${PANEL} = "latest" ]; then
-    	curl -Lo panel.tar.gz https://github.com/jexactyl/jexactyl/releases/latest/download/panel.tar.gz
+        curl -Lo panel.tar.gz https://github.com/jexactyl/jexactyl/releases/latest/download/panel.tar.gz
     else
-    	curl -Lo panel.tar.gz https://github.com/jexactyl/jexactyl/releases/download/${PANEL}/panel.tar.gz
+        curl -Lo panel.tar.gz https://github.com/jexactyl/jexactyl/releases/download/${PANEL}/panel.tar.gz
     fi
     tar -xzvf panel.tar.gz
     chmod -R 755 storage/* bootstrap/cache/
@@ -340,8 +246,6 @@ install_jexactyl() {
     output "Installing Jexactyl..."
  
     cp .env.example .env
-    # Fixed in latest release
-    # sed -i 's/APP_KEY=/APP_KEY=base64:voLfFx5NqSPFiuo1lv077qKsT9oKhIPFDLNl4x0PGqk=/' .env
     php artisan key:generate --force << EOF
 yes
 yes
@@ -358,7 +262,7 @@ EOF
         chown -R www-data:www-data * /var/www/jexactyl
     elif  [ "$lsb_dist" =  "fedora" ] || [ "$lsb_dist" =  "centos" ] || [ "$lsb_dist" =  "rhel" ] || [ "$lsb_dist" = "rocky" ] || [ "$lsb_dist" = "almalinux" ]; then
         chown -R nginx:nginx * /var/www/jexactyl
-	semanage fcontext -a -t httpd_sys_rw_content_t "/var/www/jexactyl/storage(/.*)?"
+        semanage fcontext -a -t httpd_sys_rw_content_t "/var/www/jexactyl/storage(/.*)?"
         restorecon -R /var/www/jexactyl
     fi
 
@@ -412,8 +316,8 @@ RestartSec=5s
 WantedBy=multi-user.target
 EOF
         setsebool -P httpd_can_network_connect 1
-	setsebool -P httpd_execmem 1
-	setsebool -P httpd_unified 1
+        setsebool -P httpd_execmem 1
+        setsebool -P httpd_unified 1
     fi
     sudo systemctl daemon-reload
     systemctl enable --now pteroq.service
@@ -603,7 +507,7 @@ webserver_config(){
     elif  [ "$lsb_dist" =  "fedora" ] ||  [ "$lsb_dist" =  "centos" ] || [ "$lsb_dist" =  "rhel" ] || [ "$lsb_dist" =  "rocky" ] || [ "$lsb_dist" = "almalinux" ]; then
         php_config
         nginx_config_redhat
-	chown -R nginx:nginx /var/lib/php/session
+        chown -R nginx:nginx /var/lib/php/session
     fi
 }
 
@@ -637,9 +541,9 @@ install_wings() {
     mkdir -p /etc/pterodactyl
     cd /etc/pterodactyl || exit
     if [ ${WINGS} = "latest" ]; then
-    	curl -L -o /usr/local/bin/wings https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_amd64
+        curl -L -o /usr/local/bin/wings https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_amd64
     else
-    	curl -L -o /usr/local/bin/wings https://github.com/pterodactyl/wings/releases/download/${WINGS}/wings_linux_amd64
+        curl -L -o /usr/local/bin/wings https://github.com/pterodactyl/wings/releases/download/${WINGS}/wings_linux_amd64
     fi
     chmod u+x /usr/local/bin/wings
     
@@ -670,13 +574,12 @@ EOF
     output "You should go to your panel and configure the node now."
     output "Do `systemctl start wings` after you have run the auto deployment command."
     if  [ "$lsb_dist" != "fedora" ] || [ "$lsb_dist" =  "centos" ] || [ "$lsb_dist" =  "rhel" ] || [ "$lsb_dist" =  "rocky" ] || [ "$lsb_dist" = "almalinux" ]; then
-    	output "------------------------------------------------------------------"
-	output "IMPORTANT NOTICE!!!"
-	output "Since you are on a system with targetted SELinux policies, you should be changing the Daemon Server File Directory from /var/lib/jexactyl/volumes to /var/srv/containers/jexactyl."
-	output "------------------------------------------------------------------"
+        output "------------------------------------------------------------------"
+        output "IMPORTANT NOTICE!!!"
+        output "Since you are on a system with targetted SELinux policies, you should be changing the Daemon Server File Directory from /var/lib/jexactyl/volumes to /var/srv/containers/jexactyl."
+        output "------------------------------------------------------------------"
     fi
 }
-
 
 upgrade_wings(){
     if [ ${WINGS} = "latest" ]; then
